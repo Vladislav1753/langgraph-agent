@@ -1,2 +1,35 @@
 .env
 ingest.py
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+venv/
+env/
+.venv/
+.env/
+
+*.pyc
+*.pyo
+*.pyd
+
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# IDE/editor configs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db

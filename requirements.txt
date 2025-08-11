@@ -1,0 +1,9 @@
+fastapi
+python-dotenv
+pymupdf
+pinecone-client
+langchain-core
+langchain-community
+langchain
+langchain-deepseek
+langgraph

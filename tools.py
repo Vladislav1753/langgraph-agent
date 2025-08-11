@@ -3,18 +3,18 @@ from langchain_core.tools import tool
 from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
 
-from dotenv import load_dotenv
 from pinecone import Pinecone
-from doc_loader import extract_text_pdf
 import time
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from typing import List
+from langchain_deepseek import ChatDeepSeek
+
+from langchain_core.messages import HumanMessage, BaseMessage, AIMessage, ToolMessage, SystemMessage
 
 
 @tool
-async def browsing(query: str) -> str:
+async def browsing(query: str, max_results: int = 5) -> str:
     """Browse a 'query' in  DuckDuckGo browser to find similar documents."""
-    wrapper = DuckDuckGoSearchAPIWrapper(region="wt-wt", max_results=5)
+    wrapper = DuckDuckGoSearchAPIWrapper(region="wt-wt", max_results=max_results)
     search = DuckDuckGoSearchResults(api_wrapper=wrapper)
 
     return search.invoke(query)
@@ -77,3 +77,64 @@ async def retrieving(user_id: int, query: str, dense_index):
         return "I found no relevant information in this text."
 
     return results
+
+
+@tool
+async def text_agent(text: str, task: str, user_id: int, n_questions: int = 5) -> str:
+    """Text agent tool that generates questions and summarizes documents
+
+    Args:
+    'text' - text that AI will work with
+    'task' - can be "summary", "questions", "both"
+    'n_questions' - number of questions asked by the user, defaults to 5
+    'user_id' - user id
+    """
+
+    if task not in ["summary", "questions", "both"]:
+        return "Wrong task choice, provide one of the available tasks: 'summary', 'questions', 'both'."
+
+    print(f"User {user_id} called task {task}")
+
+    text_llm = ChatDeepSeek(
+        model="deepseek-chat",
+        temperature=0.0,
+        max_tokens=None,
+        timeout=None,
+        max_retries=2,
+        streaming=True)
+
+    system_prompt = SystemMessage(content="""
+    You are a specialized agent for document processing.
+    Your role is limited to two tasks:
+    1. Generate a concise and accurate summary of the given text.
+    2. Generate 5–7 questions based on the content of the text.
+    Rules:
+    - Only perform the task(s) requested (summary, questions).
+    - Do not add any greetings, explanations, or extra comments.
+    - Use only the input text; do not invent or hallucinate.
+    - The output must be concise, structured, and strictly limited to the task.
+    """)
+
+    doc_message = SystemMessage(content=f"Document provided by user: \n\n{text}.")
+    human_message = HumanMessage(content=f"Your task: {task}")
+
+    messages = [system_prompt, doc_message, human_message]
+    try:
+        message = await text_llm.ainvoke(messages)
+    except Exception as e:
+        return f"Error {e} while invoking the llm"
+    return message.content
+
+
+@tool
+def help_tool(user_id: int) -> str:
+    """Tool that gives user information about agent's current functionality"""
+
+    print(f"User {user_id} asks about functionality")
+    functionality = """
+    Here’s what I can currently do:
+    - Answer your questions about documents you've uploaded using semantic search.
+    - Search the web for similar documents or updated information.
+    - Summarize your documents and generate follow-up questions.
+    """
+    return functionality
