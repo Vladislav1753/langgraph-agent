@@ -23,7 +23,7 @@ Built with:
 
 ## 📋 Requirements
 
-- Python 3.8+
+- Python 3.13+
 - DeepSeek API key
 - Pinecone API key
 
@@ -37,7 +37,7 @@ cd langgraph-agent
 
 2. Install dependencies:
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 3. Create a `.env` file in the root directory and add your API keys:
@@ -50,10 +50,31 @@ PINECONE_API_KEY=your_pinecone_api_key
 
 Start the FastAPI server:
 ```bash
-uvicorn main:app --reload
+uv run uvicorn main:app --reload
 ```
 
 The server will be available at: `http://localhost:8000`
+
+### Docker
+```bash
+docker build -t langgraph-agent .
+docker run --env-file .env -p 8000:8000 langgraph-agent
+```
+
+### Docker Compose for development
+```bash
+docker compose up --build
+```
+
+The API is available at `http://localhost:8000`.
+The compose setup mounts the project directory into the app container, so Python code changes are picked up by `uvicorn --reload` without rebuilding the image.
+
+If you run Langfuse separately on the host at `http://localhost:3000`, the app container can reach it via:
+```env
+LANGFUSE_HOST=http://host.docker.internal:3000
+LANGFUSE_PUBLIC_KEY=your_public_key
+LANGFUSE_SECRET_KEY=your_secret_key
+```
 
 ## 📡 API Endpoints
 
@@ -107,7 +128,11 @@ langgraph-agent/
 ├── tools.py                # Tools for the agent
 ├── doc_loader.py           # Document loading and processing utilities
 ├── config.py               # Configuration settings
-├── requirements.txt        # Project dependencies
+├── pyproject.toml          # Project dependencies
+├── uv.lock                 # Locked dependencies
+├── Dockerfile              # Container image definition
+├── docker-compose.yml      # Development app stack
+├── services/               # Business logic services
 ├── routes/
 │   ├── __init__.py
 │   ├── agent_requests.py   # Endpoint for agent requests

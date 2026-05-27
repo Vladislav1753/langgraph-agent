@@ -1,8 +1,10 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException, Request
-import logging
-import uuid
-from doc_loader import extract_text_pdf_bytes
-from config import MAX_FILE_SIZE
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+
+from services.exceptions import (
+    DocumentParseError,
+    FileTooLargeError,
+    UnsupportedFileFormatError,
+)
 
 router = APIRouter()
 
@@ -11,24 +13,15 @@ router = APIRouter()
 async def upload_text(request: Request, file: UploadFile = File(...)):
     content = await file.read()
 
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="File too large, max size is 5 MB")
+    try:
+        result = request.app.state.file_service.upload(
+            filename=file.filename,
+            content_type=file.content_type,
+            content=content,
+        )
+    except FileTooLargeError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
+    except (UnsupportedFileFormatError, DocumentParseError) as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
 
-    user_id = str(uuid.uuid4())
-
-    if file.content_type == "application/pdf":
-        text = extract_text_pdf_bytes(content)
-    else:
-        try:
-            text = content.decode("utf-8")
-        except Exception as e:
-            raise HTTPException(status_code=415, detail="Unsupported file format")
-
-    request.app.state.user_files[user_id] = text[:3000]
-    logging.info(f"User {user_id} uploaded file {file.filename}")
-
-    return {
-        "status": "ok",
-        "length": len(request.app.state.user_files[user_id]),
-        "user_id": user_id
-    }
+    return {"status": result.status, "length": result.length, "user_id": result.user_id}
