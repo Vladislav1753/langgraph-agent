@@ -3,13 +3,13 @@ import uuid
 from collections.abc import MutableMapping
 from dataclasses import dataclass
 
-from config import MAX_FILE_SIZE
-from doc_loader import extract_text_pdf_bytes
-from services.exceptions import (
+from app.core.config import MAX_FILE_SIZE
+from app.core.exceptions import (
     DocumentParseError,
     FileTooLargeError,
     UnsupportedFileFormatError,
 )
+from app.utils.doc_loader import extract_text_pdf_bytes
 
 
 logger = logging.getLogger(__name__)

@@ -3,8 +3,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from services.agent_service import AgentRequestService
-from services.exceptions import AgentExecutionError, DocumentNotFoundError
+from app.services.agent import AgentRequestService
+from app.core.exceptions import AgentExecutionError, DocumentNotFoundError
 
 
 class FakeAgent:

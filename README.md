@@ -50,7 +50,7 @@ PINECONE_API_KEY=your_pinecone_api_key
 
 Start the FastAPI server:
 ```bash
-uv run uvicorn main:app --reload
+uv run uvicorn app.main:app --reload
 ```
 
 The server will be available at: `http://localhost:8000`

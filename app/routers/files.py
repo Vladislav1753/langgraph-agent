@@ -1,6 +1,6 @@
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
-from services.exceptions import (
+from app.services.exceptions import (
     DocumentParseError,
     FileTooLargeError,
     UnsupportedFileFormatError,

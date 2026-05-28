@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Form, HTTPException, Request
 
-from services.exceptions import AgentExecutionError, DocumentNotFoundError
+from app.services.exceptions import AgentExecutionError, DocumentNotFoundError
 
 router = APIRouter()
 

@@ -1,11 +1,11 @@
 import pytest
 
-from services.exceptions import (
+from app.core.exceptions import (
     DocumentParseError,
     FileTooLargeError,
     UnsupportedFileFormatError,
 )
-from services.file_service import FileService
+from app.services.file import FileService
 
 
 def test_upload_utf8_text_stores_document():

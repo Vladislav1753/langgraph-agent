@@ -5,7 +5,7 @@ from langchain_core.messages import BaseMessage, SystemMessage, ToolMessage
 from langchain_deepseek import ChatDeepSeek
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from tools import browsing, help_tool, ingesting, retrieving, text_agent
+from app.agent.tools import browsing, help_tool, ingesting, retrieving, text_agent
 
 
 logger = logging.getLogger(__name__)

@@ -6,10 +6,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from langfuse import get_client
 
-from agent import build_agent_graph
-from routes import agent_requests, files
-from services.agent_service import AgentRequestService
-from services.file_service import FileService
+from app.agent.agent import build_agent_graph
+from app.routers import agent_requests, files
+from app.services.agent_service import AgentRequestService
+from app.services.file_service import FileService
 
 
 logger = logging.getLogger(__name__)

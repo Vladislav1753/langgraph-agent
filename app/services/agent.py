@@ -5,7 +5,7 @@ from typing import Any, Callable
 from langchain_core.messages import HumanMessage
 from langfuse.langchain import CallbackHandler
 
-from services.exceptions import AgentExecutionError, DocumentNotFoundError
+from app.core.exceptions import AgentExecutionError, DocumentNotFoundError
 
 
 logger = logging.getLogger(__name__)
