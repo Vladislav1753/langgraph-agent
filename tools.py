@@ -28,7 +28,7 @@ async def browsing(query: str, max_results: int = 5) -> str:
 
 
 def _browse_sync(query: str, max_results: int) -> str:
-    wrapper = DuckDuckGoSearchAPIWrapper(region="wt-wt", max_results=max_results)
+    wrapper = DuckDuckGoSearchAPIWrapper(region="us-en", max_results=max_results)
     search = DuckDuckGoSearchResults(api_wrapper=wrapper)
     return search.invoke(query)
 

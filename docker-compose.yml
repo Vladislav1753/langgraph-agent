@@ -10,7 +10,8 @@ services:
     environment:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       PINECONE_API_KEY: ${PINECONE_API_KEY:-}
-      LANGFUSE_HOST: ${LANGFUSE_HOST:-http://host.docker.internal:3000}
+      LANGFUSE_HOST: ${LANGFUSE_DOCKER_HOST:-http://host.docker.internal:3000}
+      LANGFUSE_BASE_URL: ${LANGFUSE_DOCKER_BASE_URL:-http://host.docker.internal:3000}
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
       PYTHONPATH: /app

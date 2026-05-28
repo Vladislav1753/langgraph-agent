@@ -41,8 +41,8 @@ class AgentState(TypedDict):
 
 def create_llm_with_tools():
     return ChatDeepSeek(
-        model="deepseek-chat",
-        temperature=0.0,
+        model="deepseek-v4-flash",
+        temperature=0.2,
         max_tokens=None,
         timeout=None,
         max_retries=2,

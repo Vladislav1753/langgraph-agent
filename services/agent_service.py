@@ -1,8 +1,9 @@
 import logging
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Callable
 
 from langchain_core.messages import HumanMessage
+from langfuse.langchain import CallbackHandler
 
 from services.exceptions import AgentExecutionError, DocumentNotFoundError
 
@@ -11,13 +12,21 @@ logger = logging.getLogger(__name__)
 
 
 class AgentRequestService:
-    def __init__(self, agent: Any, user_files: Mapping[str, str]):
+    def __init__(
+        self,
+        agent: Any,
+        user_files: Mapping[str, str],
+        callback_handler_factory: Callable[[], Any] = CallbackHandler,
+    ):
         self._agent = agent
         self._user_files = user_files
+        self._callback_handler_factory = callback_handler_factory
 
     async def run(self, user_input: str, user_id: str) -> str:
         if user_id not in self._user_files:
             raise DocumentNotFoundError("No document uploaded for this user_id")
+
+        langfuse_handler = self._callback_handler_factory()
 
         try:
             new_state = await self._agent.ainvoke(
@@ -25,7 +34,12 @@ class AgentRequestService:
                     "messages": [HumanMessage(content=user_input)],
                     "text": self._user_files[user_id],
                     "user_id": user_id,
-                }
+                },
+                config={
+                    "callbacks": [langfuse_handler],
+                    "metadata": {"user_id": user_id},
+                    "tags": ["agent-request"],
+                },
             )
             return str(new_state["messages"][-1].content)
         except Exception as exc:

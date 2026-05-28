@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from cachetools import TTLCache
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from langfuse import get_client
 
 from agent import build_agent_graph
 from routes import agent_requests, files
@@ -28,8 +29,11 @@ async def lifespan(app: FastAPI):
     )
 
     logger.info("Application startup complete")
-    yield
-    logger.info("Application shutdown complete")
+    try:
+        yield
+    finally:
+        get_client().flush()
+        logger.info("Application shutdown complete")
 
 
 def create_app() -> FastAPI:
