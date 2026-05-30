@@ -4,7 +4,7 @@ from collections.abc import MutableMapping
 from dataclasses import dataclass
 from typing import Callable, Awaitable
 
-from app.core.config import MAX_FILE_SIZE
+from app.core.config import settings
 from app.core.exceptions import (
     DocumentParseError,
     FileTooLargeError,
@@ -28,7 +28,7 @@ class FileService:
     def __init__(
         self,
         user_files: MutableMapping[str, str],
-        max_file_size: int = MAX_FILE_SIZE,
+        max_file_size: int = settings.max_file_size,
         ingest_document_func: Callable[[str, str], Awaitable[int]] = ingest_document,
     ):
         self._user_files = user_files

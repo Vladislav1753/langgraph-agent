@@ -3,9 +3,11 @@ from collections.abc import Mapping
 from typing import Any, Callable
 
 from langchain_core.messages import HumanMessage
+from langfuse import propagate_attributes
 from langfuse.langchain import CallbackHandler
 
 from app.core.exceptions import AgentExecutionError, DocumentNotFoundError
+from app.core.config import settings
 
 
 logger = logging.getLogger(__name__)
@@ -29,18 +31,19 @@ class AgentRequestService:
         langfuse_handler = self._callback_handler_factory()
 
         try:
-            new_state = await self._agent.ainvoke(
-                {
-                    "messages": [HumanMessage(content=user_input)],
-                    "user_id": user_id,
-                },
-                config={
-                    "callbacks": [langfuse_handler],
-                    "metadata": {"user_id": user_id},
-                    "tags": ["agent-request"],
-                },
-            )
-            return str(new_state["messages"][-1].content)
+            with propagate_attributes(session_id=user_id):
+                new_state = await self._agent.ainvoke(
+                    {
+                        "messages": [HumanMessage(content=user_input)],
+                        "user_id": user_id,
+                    },
+                    config={
+                        "callbacks": [langfuse_handler],
+                        "metadata": {"user_id": user_id},
+                        "tags": [settings.environment],
+                    },
+                )
+                return str(new_state["messages"][-1].content)
         except Exception as exc:
             logger.exception("Agent error for user %s", user_id)
             raise AgentExecutionError("Error while using LLM-agent") from exc

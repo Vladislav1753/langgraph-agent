@@ -196,7 +196,7 @@ async def text_agent(user_id: str, task: str, n_questions: int = 5) -> str:
     logger.info("User %s called text_agent task %s", user_id, task)
 
     text_llm = ChatDeepSeek(
-        model="deepseek-chat",
+        model="deepseek-v4-flash",
         temperature=0.0,
         max_tokens=None,
         timeout=None,
