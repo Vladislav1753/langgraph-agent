@@ -42,7 +42,6 @@ def test_run_invokes_agent_with_cached_document():
     response = asyncio.run(service.run("summarize", "user-1"))
 
     assert response == "summary"
-    assert agent.last_state["text"] == "Document text"
     assert agent.last_state["user_id"] == "user-1"
     assert agent.last_state["messages"][0].content == "summarize"
     assert agent.last_config["callbacks"] == [callback_handler]

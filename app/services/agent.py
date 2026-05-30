@@ -32,7 +32,6 @@ class AgentRequestService:
             new_state = await self._agent.ainvoke(
                 {
                     "messages": [HumanMessage(content=user_input)],
-                    "text": self._user_files[user_id],
                     "user_id": user_id,
                 },
                 config={

@@ -7,9 +7,11 @@ from fastapi import FastAPI
 from langfuse import get_client
 
 from app.agent.agent import build_agent_graph
+from app.agent.tools import set_document_store
+from app.core.handlers import setup_exception_handlers
 from app.routers import agent_requests, files
-from app.services.agent_service import AgentRequestService
-from app.services.file_service import FileService
+from app.services.agent import AgentRequestService
+from app.services.file import FileService
 
 
 logger = logging.getLogger(__name__)
@@ -22,6 +24,7 @@ async def lifespan(app: FastAPI):
 
     app.state.agent = build_agent_graph().compile()
     app.state.user_files = TTLCache(maxsize=100, ttl=3600)
+    set_document_store(app.state.user_files)
     app.state.file_service = FileService(app.state.user_files)
     app.state.agent_request_service = AgentRequestService(
         app.state.agent,
@@ -38,6 +41,9 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
+
+    setup_exception_handlers(app)
+
     app.include_router(files.router, prefix="/files")
     app.include_router(agent_requests.router, prefix="/agent-request")
     return app

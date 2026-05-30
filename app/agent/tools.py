@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 from langchain_community.tools import DuckDuckGoSearchResults
@@ -19,6 +20,18 @@ PINECONE_REGION = "us-east-1"
 PINECONE_EMBED_MODEL = "llama-text-embed-v2"
 PINECONE_RERANK_MODEL = "bge-reranker-v2-m3"
 PINECONE_TEXT_FIELD = "chunk_text"
+_document_store: Mapping[str, str] | None = None
+
+
+def set_document_store(document_store: Mapping[str, str]) -> None:
+    global _document_store
+    _document_store = document_store
+
+
+def _get_document_text(user_id: str) -> str | None:
+    if _document_store is None:
+        return None
+    return _document_store.get(user_id)
 
 
 @tool
@@ -93,6 +106,22 @@ def _upsert_records(namespace: str, records: list[dict[str, str]]) -> None:
     index.upsert_records(namespace=namespace, records=records)
 
 
+def build_document_records(text: str) -> list[dict[str, str]]:
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    chunks = splitter.split_text(text)
+    return [
+        {"_id": f"chunk-{i}", PINECONE_TEXT_FIELD: chunk}
+        for i, chunk in enumerate(chunks)
+    ]
+
+
+async def ingest_document(user_id: str, text: str) -> int:
+    records = build_document_records(text)
+    await asyncio.to_thread(_upsert_records, user_id, records)
+    await asyncio.sleep(2)
+    return len(records)
+
+
 def _search_records(namespace: str, query: str) -> Any:
     index = _get_or_create_index()
     rerank = {
@@ -140,29 +169,11 @@ def _get_hit_text(hit: Any) -> str:
 
 
 @tool
-async def ingesting(text: str, user_id: str) -> str:
-    """Ingest document chunks into Pinecone for semantic search."""
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
-    chunks = splitter.split_text(text)
-
-    docs_to_upsert = [
-        {"_id": f"chunk-{i}", PINECONE_TEXT_FIELD: chunk}
-        for i, chunk in enumerate(chunks)
-    ]
-
-    await asyncio.to_thread(_upsert_records, user_id, docs_to_upsert)
-    await asyncio.sleep(2)
-    return (
-        f"Successfully ingested {len(chunks)} chunks for user {user_id}. "
-        "You can now use 'retrieving' to search this document."
-    )
-
-
-@tool
 async def retrieving(user_id: str, query: str) -> str:
     """Perform semantic search over stored documents."""
     results = await asyncio.to_thread(_search_records, user_id, query)
     hits = _get_hits(results)
+    logger.info("Retrieved %s hits for user %s", len(hits), user_id)
 
     if not hits:
         return "No relevant information found in the document for this query."
@@ -173,8 +184,12 @@ async def retrieving(user_id: str, query: str) -> str:
 
 
 @tool
-async def text_agent(text: str, task: str, user_id: str, n_questions: int = 5) -> str:
+async def text_agent(user_id: str, task: str, n_questions: int = 5) -> str:
     """Generate summaries and/or questions for a document."""
+    text = _get_document_text(user_id)
+    if not text:
+        return "No uploaded document found for this user_id."
+
     if task not in ["summary", "questions", "both"]:
         return "Wrong task choice, provide one of the available tasks: 'summary', 'questions', 'both'."
 

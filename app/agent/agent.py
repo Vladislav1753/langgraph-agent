@@ -5,17 +5,16 @@ from langchain_core.messages import BaseMessage, SystemMessage, ToolMessage
 from langchain_deepseek import ChatDeepSeek
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from app.agent.tools import browsing, help_tool, ingesting, retrieving, text_agent
+from app.agent.tools import browsing, help_tool, retrieving, text_agent
 from app.agent.prompts import AGENT_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
-ALL_TOOLS = [browsing, ingesting, retrieving, text_agent, help_tool]
+ALL_TOOLS = [browsing, retrieving, text_agent, help_tool]
 
 
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
-    text: str
     user_id: str
 
 
@@ -37,7 +36,11 @@ def build_agent_graph(llm: Any | None = None) -> StateGraph:
     async def call_llm(state: AgentState) -> AgentState:
         system_prompt = SystemMessage(content=AGENT_SYSTEM_PROMPT)
         doc_message = SystemMessage(
-            content=f"Document provided by user:\n\n{state['text']}"
+            content=(
+                "The user has uploaded a document for this conversation. "
+                f"Use user_id={state['user_id']} when calling document tools. "
+                "Do not ask the user to paste or upload the same document again."
+            )
         )
 
         messages = [system_prompt, doc_message] + list(state["messages"])

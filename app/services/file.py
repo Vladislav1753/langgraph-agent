@@ -2,6 +2,7 @@ import logging
 import uuid
 from collections.abc import MutableMapping
 from dataclasses import dataclass
+from typing import Callable, Awaitable
 
 from app.core.config import MAX_FILE_SIZE
 from app.core.exceptions import (
@@ -9,6 +10,7 @@ from app.core.exceptions import (
     FileTooLargeError,
     UnsupportedFileFormatError,
 )
+from app.agent.tools import ingest_document
 from app.utils.doc_loader import extract_text_pdf_bytes
 
 
@@ -24,12 +26,16 @@ class UploadResult:
 
 class FileService:
     def __init__(
-        self, user_files: MutableMapping[str, str], max_file_size: int = MAX_FILE_SIZE
+        self,
+        user_files: MutableMapping[str, str],
+        max_file_size: int = MAX_FILE_SIZE,
+        ingest_document_func: Callable[[str, str], Awaitable[int]] = ingest_document,
     ):
         self._user_files = user_files
         self._max_file_size = max_file_size
+        self._ingest_document = ingest_document_func
 
-    def upload(
+    async def upload(
         self, filename: str | None, content_type: str | None, content: bytes
     ) -> UploadResult:
         if len(content) > self._max_file_size:
@@ -41,8 +47,14 @@ class FileService:
 
         user_id = str(uuid.uuid4())
         self._user_files[user_id] = text
+        chunk_count = await self._ingest_document(user_id, text)
 
-        logger.info("User %s uploaded file %s", user_id, filename)
+        logger.info(
+            "User %s uploaded file %s and indexed %s chunks",
+            user_id,
+            filename,
+            chunk_count,
+        )
         return UploadResult(status="ok", length=len(text), user_id=user_id)
 
     @staticmethod

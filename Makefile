@@ -5,7 +5,7 @@ test:
 	$(PYTHON) -m pytest
 
 typecheck:
-	$(PYTHON) -m mypy app rag
+	$(PYTHON) -m mypy app
 
 lint:
 	$(PYTHON) -m ruff check .
