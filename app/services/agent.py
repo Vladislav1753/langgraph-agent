@@ -40,7 +40,7 @@ class AgentRequestService:
                     config={
                         "callbacks": [langfuse_handler],
                         "metadata": {"user_id": user_id},
-                        "tags": [settings.environment],
+                        "tags": settings.tags,
                     },
                 )
                 return str(new_state["messages"][-1].content)
