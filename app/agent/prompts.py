@@ -27,9 +27,9 @@ Use 'help_tool' when the user asks about your functionality.
 
 
 DOCUMENT_CONTEXT_PROMPT = (
-    "The user has uploaded a document for this conversation. "
-    "Use user_id={user_id} when calling document tools. "
-    "Do not ask the user to paste or upload the same document again."
+    "Document context: has_document={has_document}, user_id={user_id}. "
+    "Use document tools only when has_document is true. "
+    "When has_document is false, answer without document retrieval and do not claim that a document is available."
 )
 
 

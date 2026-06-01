@@ -15,7 +15,8 @@ ALL_TOOLS = [browsing, retrieving, text_agent, help_tool]
 
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add_messages]
-    user_id: str
+    user_id: str | None
+    has_document: bool
 
 
 def create_llm_with_tools():
@@ -39,6 +40,7 @@ def build_agent_graph(llm: Any | None = None) -> StateGraph:
             {
                 "messages": list(state["messages"]),
                 "user_id": state["user_id"],
+                "has_document": state["has_document"],
             }
         )
         return {"messages": [message]}

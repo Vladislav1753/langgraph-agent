@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.services.agent import AgentRequestService
-from app.core.exceptions import AgentExecutionError, DocumentNotFoundError
+from app.core.exceptions import AgentExecutionError
 
 
 class FakeAgent:
@@ -24,11 +24,23 @@ class FailingAgent:
         raise RuntimeError("agent failed")
 
 
-def test_run_raises_when_document_missing():
-    service = AgentRequestService(FakeAgent(), {})
+def test_run_invokes_agent_without_document():
+    agent = FakeAgent(response="general answer")
+    callback_handler = object()
+    service = AgentRequestService(
+        agent, {}, callback_handler_factory=lambda: callback_handler
+    )
 
-    with pytest.raises(DocumentNotFoundError):
-        asyncio.run(service.run("summarize", "missing-user"))
+    response = asyncio.run(service.run("hello"))
+
+    assert response == "general answer"
+    assert agent.last_state["user_id"] is None
+    assert agent.last_state["has_document"] is False
+    assert agent.last_config["callbacks"] == [callback_handler]
+    assert agent.last_config["metadata"] == {
+        "user_id": None,
+        "has_document": False,
+    }
 
 
 def test_run_invokes_agent_with_cached_document():
@@ -43,9 +55,13 @@ def test_run_invokes_agent_with_cached_document():
 
     assert response == "summary"
     assert agent.last_state["user_id"] == "user-1"
+    assert agent.last_state["has_document"] is True
     assert agent.last_state["messages"][0].content == "summarize"
     assert agent.last_config["callbacks"] == [callback_handler]
-    assert agent.last_config["metadata"] == {"user_id": "user-1"}
+    assert agent.last_config["metadata"] == {
+        "user_id": "user-1",
+        "has_document": True,
+    }
     assert agent.last_config["tags"] == ["development", "v1.0.0"]
 
 
