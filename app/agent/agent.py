@@ -1,12 +1,12 @@
 import logging
 from typing import Annotated, Any, Sequence, TypedDict
 
-from langchain_core.messages import BaseMessage, SystemMessage, ToolMessage
+from langchain_core.messages import BaseMessage, ToolMessage
 from langchain_deepseek import ChatDeepSeek
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from app.agent.tools import browsing, help_tool, retrieving, text_agent
-from app.agent.prompts import AGENT_SYSTEM_PROMPT
+from app.agent.prompts import get_agent_chat_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -34,17 +34,13 @@ def build_agent_graph(llm: Any | None = None) -> StateGraph:
     tools_by_name = {tool.name: tool for tool in ALL_TOOLS}
 
     async def call_llm(state: AgentState) -> AgentState:
-        system_prompt = SystemMessage(content=AGENT_SYSTEM_PROMPT)
-        doc_message = SystemMessage(
-            content=(
-                "The user has uploaded a document for this conversation. "
-                f"Use user_id={state['user_id']} when calling document tools. "
-                "Do not ask the user to paste or upload the same document again."
-            )
+        chain = get_agent_chat_prompt() | llm_with_tools
+        message = await chain.ainvoke(
+            {
+                "messages": list(state["messages"]),
+                "user_id": state["user_id"],
+            }
         )
-
-        messages = [system_prompt, doc_message] + list(state["messages"])
-        message = await llm_with_tools.ainvoke(messages)
         return {"messages": [message]}
 
     async def tool_node(state: AgentState) -> AgentState:

@@ -46,7 +46,7 @@ def test_run_invokes_agent_with_cached_document():
     assert agent.last_state["messages"][0].content == "summarize"
     assert agent.last_config["callbacks"] == [callback_handler]
     assert agent.last_config["metadata"] == {"user_id": "user-1"}
-    assert agent.last_config["tags"] == ["agent-request"]
+    assert agent.last_config["tags"] == ["development", "v1.0.0"]
 
 
 def test_run_maps_agent_errors_to_service_error():
