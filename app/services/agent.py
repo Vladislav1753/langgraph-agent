@@ -40,8 +40,8 @@ class AgentRequestService:
                     config={
                         "callbacks": [langfuse_handler],
                         "metadata": {
-                            "user_id": user_id,
-                            "has_document": has_document,
+                            "user_id": user_id or "anonymous",
+                            "has_document": str(has_document).lower(),
                         },
                         "tags": settings.tags,
                     },

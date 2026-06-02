@@ -38,8 +38,8 @@ def test_run_invokes_agent_without_document():
     assert agent.last_state["has_document"] is False
     assert agent.last_config["callbacks"] == [callback_handler]
     assert agent.last_config["metadata"] == {
-        "user_id": None,
-        "has_document": False,
+        "user_id": "anonymous",
+        "has_document": "false",
     }
 
 
@@ -60,7 +60,7 @@ def test_run_invokes_agent_with_cached_document():
     assert agent.last_config["callbacks"] == [callback_handler]
     assert agent.last_config["metadata"] == {
         "user_id": "user-1",
-        "has_document": True,
+        "has_document": "true",
     }
     assert agent.last_config["tags"] == ["development", "v1.0.0"]
 
