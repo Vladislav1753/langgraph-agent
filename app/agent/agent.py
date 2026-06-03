@@ -1,12 +1,16 @@
+import asyncio
 import logging
 from typing import Annotated, Any, Sequence, TypedDict
 
 from langchain_core.messages import BaseMessage, ToolMessage
 from langchain_deepseek import ChatDeepSeek
+from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
+from langgraph.types import RetryPolicy, TimeoutPolicy, default_retry_on
 from langgraph.graph.message import add_messages
 from app.agent.tools import browsing, help_tool, retrieving, text_agent
 from app.agent.prompts import get_agent_chat_prompt
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +23,46 @@ class AgentState(TypedDict):
     has_document: bool
 
 
+def retry_on_transient_errors(exc: BaseException) -> bool:
+    if isinstance(exc, (ValueError, TypeError, KeyError)):
+        return False
+    return default_retry_on(exc)
+
+
+llm_retry = RetryPolicy(
+    max_attempts=3,
+    initial_interval=0.7,
+    backoff_factor=2.0,
+    max_interval=8.0,
+    jitter=True,
+    retry_on=retry_on_transient_errors,
+)
+
+llm_timeout = TimeoutPolicy(
+    run_timeout=60,
+    idle_timeout=25,
+)
+
+
 def create_llm_with_tools():
-    return ChatDeepSeek(
+    primary = ChatDeepSeek(
         model="deepseek-v4-flash",
         temperature=0.2,
         max_tokens=None,
-        timeout=None,
-        max_retries=2,
+        timeout=30,
+        max_retries=0,
         streaming=True,
     ).bind_tools(ALL_TOOLS)
+
+    fallback = ChatOpenAI(
+        model="gpt-5.4-mini-2026-03-17",
+        temperature=0.2,
+        max_tokens=None,
+        timeout=30,
+        max_retries=0,
+        streaming=True,
+    ).bind_tools(ALL_TOOLS)
+    return primary.with_fallbacks([fallback])
 
 
 def build_agent_graph(llm: Any | None = None) -> StateGraph:
@@ -52,17 +87,27 @@ def build_agent_graph(llm: Any | None = None) -> StateGraph:
         for tool_call in tool_calls:
             tool_name = tool_call["name"]
             logger.info("Calling tool: %s", tool_name)
+            try:
+                if tool_name not in tools_by_name:
+                    content = "Incorrect tool name. Please retry and select a tool from the available tools."
+                else:
+                    content = str(
+                        await asyncio.wait_for(
+                            tools_by_name[tool_name].ainvoke(tool_call["args"]),
+                            timeout=settings.tool_timeout,
+                        )
+                    )
 
-            if tool_name not in tools_by_name:
-                result = "Incorrect tool name. Please retry and select a tool from the available tools."
-            else:
-                result = await tools_by_name[tool_name].ainvoke(tool_call["args"])
+            except asyncio.TimeoutError:
+                logger.warning("Tool %s timed out", tool_name)
+                content = f"Tool '{tool_name}' timed out after {settings.tool_timeout}s. Try a different approach."
+            except Exception as exc:
+                logger.exception("Tool %s failed", tool_name)
+                content = f"Tool '{tool_name}' failed: {exc}. Try a different tool or rephrase."
 
             results.append(
                 ToolMessage(
-                    tool_call_id=tool_call["id"],
-                    name=tool_name,
-                    content=str(result),
+                    tool_call_id=tool_call["id"], name=tool_name, content=content
                 )
             )
 
@@ -75,7 +120,12 @@ def build_agent_graph(llm: Any | None = None) -> StateGraph:
         return len(tool_calls) > 0
 
     graph = StateGraph(AgentState)
-    graph.add_node("agent", call_llm)
+    graph.add_node(
+        "agent",
+        call_llm,
+        retry_policy=llm_retry,
+        timeout=llm_timeout,
+    )
     graph.add_edge(START, "agent")
     graph.add_node("tool_node", tool_node)
     graph.add_conditional_edges(

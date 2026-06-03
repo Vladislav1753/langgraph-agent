@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import Mapping
 from typing import Any, Callable
@@ -31,20 +32,23 @@ class AgentRequestService:
 
         try:
             with propagate_attributes(session_id=session_id):
-                new_state = await self._agent.ainvoke(
-                    {
-                        "messages": [HumanMessage(content=user_input)],
-                        "user_id": user_id,
-                        "has_document": has_document,
-                    },
-                    config={
-                        "callbacks": [langfuse_handler],
-                        "metadata": {
-                            "user_id": user_id or "anonymous",
-                            "has_document": str(has_document).lower(),
+                new_state = await asyncio.wait_for(
+                    self._agent.ainvoke(
+                        {
+                            "messages": [HumanMessage(content=user_input)],
+                            "user_id": user_id,
+                            "has_document": has_document,
                         },
-                        "tags": settings.tags,
-                    },
+                        config={
+                            "callbacks": [langfuse_handler],
+                            "metadata": {
+                                "user_id": user_id or "anonymous",
+                                "has_document": str(has_document).lower(),
+                            },
+                            "tags": settings.tags,
+                        },
+                    ),
+                    timeout=settings.task_timeout,
                 )
                 return str(new_state["messages"][-1].content)
         except Exception as exc:
