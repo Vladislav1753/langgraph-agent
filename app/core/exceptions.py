@@ -22,6 +22,10 @@ class ObjectNotFoundError(AppBaseError):
     """Raised when object is not found."""
 
 
+class TaskNotFoundError(ObjectNotFoundError):
+    """Raised when a request references an unknown uploaded document."""
+
+
 class DocumentNotFoundError(ObjectNotFoundError):
     """Raised when a request references an unknown uploaded document."""
 

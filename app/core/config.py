@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     tags: list[str] = ["development", "v1.0.0"]
     tool_timeout: int = 30
     task_timeout: int = 60
+    task_store_maxsize: int = 1000
+    task_store_ttl: int = 3600
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
